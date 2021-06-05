@@ -119,7 +119,7 @@ data "archive_file" "lambda_zip" {
 resource "aws_lambda_function" "default" {
   function_name    = "${var.name}-${var.region}"
   filename         = data.archive_file.lambda_zip.output_path
-  description      = "EC2 AMI Backup Automation."
+  description      = "EC2 AMI Backup Automation"
   role             = aws_iam_role.default.arn
   handler          = "index.handler"
   runtime          = "nodejs12.x"
