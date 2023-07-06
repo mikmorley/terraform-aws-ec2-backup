@@ -1,36 +1,3 @@
-variable "name" {
-  type = string
-}
-
-variable "environment" {
-  type = string
-}
-
-variable "region" {
-  type = string
-}
-
-variable "timeout" {
-  type    = number
-  default = 60
-}
-
-variable "backup_tag" {
-  type        = string
-  default     = "Backup"
-  description = "The EC2 Instance Tag that will be checked for the 'yes' value, to backup."
-}
-
-variable "backup_retention" {
-  type        = number
-  default     = 30
-  description = "The number of days a backup will be kept."
-}
-
-variable "schedule_expression" {
-  description = "Scheduling expression for triggering the Lambda Function using CloudWatch events. For example, cron(0 20 * * ? *) or rate(5 minutes)."
-}
-
 resource "aws_iam_role" "default" {
   name = "${var.name}-${var.region}"
   path = "/service-role/"
@@ -53,6 +20,10 @@ resource "aws_iam_role" "default" {
   ]
 }
   EOF
+
+  tags = merge({
+    Name = "${var.name}-${var.region}"
+  }, var.default_tags)
 }
 
 resource "aws_iam_policy_attachment" "default" {
@@ -104,28 +75,22 @@ resource "aws_cloudwatch_log_group" "default" {
   name              = "/aws/lambda/${aws_lambda_function.default.function_name}"
   retention_in_days = 14
 
-  tags = {
+  tags = merge({
     Name        = var.name
     Environment = var.environment
-  }
-}
-
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda/"
-  output_path = "${path.module}/zip/lambda_function.zip"
+  }, var.default_tags)
 }
 
 resource "aws_lambda_function" "default" {
   function_name    = "${var.name}-${var.region}"
-  filename         = data.archive_file.lambda_zip.output_path
   description      = "EC2 AMI Backup Automation"
   role             = aws_iam_role.default.arn
   handler          = "index.handler"
   runtime          = "nodejs12.x"
   timeout          = var.timeout
   memory_size      = 128
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = "${path.module}/zip/lambda_function.zip"
+  source_code_hash = filebase64sha256("${path.module}/zip/lambda_function.zip")
 
   environment {
     variables = {
@@ -134,11 +99,11 @@ resource "aws_lambda_function" "default" {
     }
   }
 
-  tags = {
+  tags = merge({
     Name        = var.name
     Type        = "Lambda Function"
     Environment = var.environment
-  }
+  }, var.default_tags)
 }
 
 resource "aws_lambda_permission" "default" {
@@ -153,6 +118,11 @@ resource "aws_cloudwatch_event_rule" "default" {
   name                = "${var.name}-${var.region}-trigger"
   description         = "Triggers AMI Backup of EC2 Instances"
   schedule_expression = var.schedule_expression
+
+  tags = merge({
+    Name        = "${var.name}-${var.region}-trigger"
+    Environment = var.environment
+  }, var.default_tags)
 }
 
 resource "aws_cloudwatch_event_target" "default" {

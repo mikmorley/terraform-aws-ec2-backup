@@ -1,7 +1,10 @@
+[![terraform-lint](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml/badge.svg)](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml)
+
 # aws-terraform-scheduled-ec2-ami-backup-automation
+
 Custom terraform module to deploy scheduled EC2 AMI backup automation.
 
-### Usage
+### Module Usage
 
 ```terraform
 module "ami_scheduled_backup" {
@@ -13,12 +16,13 @@ module "ami_scheduled_backup" {
   backup_tag          = var.backup_tag
   backup_retention    = var.backup_retention
   schedule_expression = var.cron_expressions
+  default_tags        = var.default_tags
 }
 ```
 
 Once deployed, add the value specified as `backup_tag` to the EC2 resources to be backed up using this process. **For Example:** If the `backup_tag` is _Backup-AZ-A_, add a new Tag to the EC2 Instances with the _key_:_value_ of _Backup-AZ-A_:_yes_ (**Note:** The Tag value **must** be set to **yes** in order for the backup to be created).
 
-#### Example
+#### Example Module Usage
 
 ```terraform
 module "ami_scheduled_backup" {
@@ -30,6 +34,10 @@ module "ami_scheduled_backup" {
   backup_tag          = "Backup-AZ-A"
   backup_retention    = 7 # Keep seven days of backs (AMIs & Snapshots)
   schedule_expression = "cron(0 20 * * ? *)" # Backup at 8:00pm UTC Daily
+
+  default_tags = {
+    Owner = "Cloud Engineering"
+  }
 }
 ```
 
@@ -44,3 +52,4 @@ module "ami_scheduled_backup" {
 |`backup_tag`|_Optional_, Specify the tag that will be assigned to EC2 instances that are to be backed up (defaults to _Backup_). **Note:** The Tag value **must** be set to **yes** in order for the backup to be created.|
 |`backup_retention`|_Optional_, Specify the number of days to keep the AMI and Snapshots (Defaults to 30).|
 |`schedule_expression`|_Required_, Scheduling expression for triggering the Lambda Function using CloudWatch events. For example, cron(0 20 * * ? *) or rate(5 minutes).|
+|`default_tags`|_Optional_, default tags to be applied to all resources.|
