@@ -77,22 +77,16 @@ resource "aws_cloudwatch_log_group" "default" {
   }
 }
 
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda/"
-  output_path = "${path.module}/zip/lambda_function.zip"
-}
-
 resource "aws_lambda_function" "default" {
   function_name    = "${var.name}-${var.region}"
-  filename         = data.archive_file.lambda_zip.output_path
   description      = "EC2 AMI Backup Automation"
   role             = aws_iam_role.default.arn
   handler          = "index.handler"
   runtime          = "nodejs12.x"
   timeout          = var.timeout
   memory_size      = 128
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = "${path.module}/zip/lambda_function.zip"
+  source_code_hash = filebase64sha256("${path.module}/zip/lambda_function.zip")
 
   environment {
     variables = {
