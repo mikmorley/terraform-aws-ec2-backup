@@ -30,3 +30,9 @@ variable "backup_retention" {
 variable "schedule_expression" {
   description = "Scheduling expression for triggering the Lambda Function using CloudWatch events. For example, cron(0 20 * * ? *) or rate(5 minutes)."
 }
+
+variable "default_tags" {
+  description = "Optional default tags to be applied to all resources"
+  type        = map(string)
+  default     = {}
+}

@@ -20,6 +20,10 @@ resource "aws_iam_role" "default" {
   ]
 }
   EOF
+
+  tags = merge({
+    Name = "${var.name}-${var.region}"
+  }, var.default_tags)
 }
 
 resource "aws_iam_policy_attachment" "default" {
@@ -71,10 +75,10 @@ resource "aws_cloudwatch_log_group" "default" {
   name              = "/aws/lambda/${aws_lambda_function.default.function_name}"
   retention_in_days = 14
 
-  tags = {
+  tags = merge({
     Name        = var.name
     Environment = var.environment
-  }
+  }, var.default_tags)
 }
 
 resource "aws_lambda_function" "default" {
@@ -95,11 +99,11 @@ resource "aws_lambda_function" "default" {
     }
   }
 
-  tags = {
+  tags = merge({
     Name        = var.name
     Type        = "Lambda Function"
     Environment = var.environment
-  }
+  }, var.default_tags)
 }
 
 resource "aws_lambda_permission" "default" {
@@ -114,6 +118,11 @@ resource "aws_cloudwatch_event_rule" "default" {
   name                = "${var.name}-${var.region}-trigger"
   description         = "Triggers AMI Backup of EC2 Instances"
   schedule_expression = var.schedule_expression
+
+  tags = merge({
+    Name        = "${var.name}-${var.region}-trigger"
+    Environment = var.environment
+  }, var.default_tags)
 }
 
 resource "aws_cloudwatch_event_target" "default" {
