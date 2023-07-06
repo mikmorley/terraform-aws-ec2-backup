@@ -8,7 +8,7 @@ Custom terraform module to deploy scheduled EC2 AMI backup automation.
 
 ```terraform
 module "ami_scheduled_backup" {
-  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.0.0"
+  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
 
   name                = var.name
   environment         = var.environment
@@ -26,7 +26,7 @@ Once deployed, add the value specified as `backup_tag` to the EC2 resources to b
 
 ```terraform
 module "ami_scheduled_backup" {
-  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.0.0"
+  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
 
   name                = "ami-backups-az-a"
   environment         = "Production"
