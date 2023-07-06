@@ -2,7 +2,11 @@
 
 ## Manual (Re)Build of Lambda Package
 
+Run the following script locally to rebuild the Lambda package manually.
+
 ```
+#!/bin/bash
+
 echo "Removing any cached node_modules"
 rm -rf ./lambda/node_modules
 
