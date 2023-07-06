@@ -1,3 +1,5 @@
+[![terraform-lint](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml/badge.svg)](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml)
+
 # aws-terraform-scheduled-ec2-ami-backup-automation
 
 Custom terraform module to deploy scheduled EC2 AMI backup automation.
