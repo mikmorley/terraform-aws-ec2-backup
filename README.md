@@ -1,7 +1,8 @@
 # aws-terraform-scheduled-ec2-ami-backup-automation
+
 Custom terraform module to deploy scheduled EC2 AMI backup automation.
 
-### Usage
+### Module Usage
 
 ```terraform
 module "ami_scheduled_backup" {
@@ -18,7 +19,7 @@ module "ami_scheduled_backup" {
 
 Once deployed, add the value specified as `backup_tag` to the EC2 resources to be backed up using this process. **For Example:** If the `backup_tag` is _Backup-AZ-A_, add a new Tag to the EC2 Instances with the _key_:_value_ of _Backup-AZ-A_:_yes_ (**Note:** The Tag value **must** be set to **yes** in order for the backup to be created).
 
-#### Example
+#### Example Module Usage
 
 ```terraform
 module "ami_scheduled_backup" {
