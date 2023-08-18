@@ -1,12 +1,12 @@
-[![terraform-lint](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml/badge.svg)](https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml)
+[![terraform-lint](https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml/badge.svg)](https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation/actions/workflows/terraform-lint.yml)
 
-# aws-terraform-scheduled-ec2-ami-backup-automation
+# terraform-aws-scheduled-ec2-ami-backup-automation
 
-The **aws-terraform-scheduled-ec2-ami-backup-automation** module is a customizable Terraform solution designed to automate scheduled backups of Amazon EC2 instances, providing a seamless way to safeguard your data and system configurations. This module simplifies the process of creating and managing automated backup workflows for your EC2 resources, ensuring data resilience and streamlined disaster recovery.
+The **terraform-aws-scheduled-ec2-ami-backup-automation** module is a customizable Terraform solution designed to automate scheduled backups of Amazon EC2 instances, providing a seamless way to safeguard your data and system configurations. This module simplifies the process of creating and managing automated backup workflows for your EC2 resources, ensuring data resilience and streamlined disaster recovery.
 
 ## Purpose
 
-Managing regular backups of your Amazon EC2 instances is a critical aspect of maintaining data integrity and system availability. However, setting up and managing these backups can be complex and time-consuming. The **aws-terraform-scheduled-ec2-ami-backup-automation** module streamlines this process by offering a versatile and configurable solution that allows you to:
+Managing regular backups of your Amazon EC2 instances is a critical aspect of maintaining data integrity and system availability. However, setting up and managing these backups can be complex and time-consuming. The **terraform-aws-scheduled-ec2-ami-backup-automation** module streamlines this process by offering a versatile and configurable solution that allows you to:
 
 - Automate the creation of Amazon Machine Images (AMIs) and associated snapshots at scheduled intervals.
 - Specify backup retention policies to control the number of days AMIs and snapshots are retained.
@@ -18,12 +18,12 @@ With its user-friendly configuration and seamless integration into your existing
 
 ## Module Usage
 
-To incorporate the **aws-terraform-scheduled-ec2-ami-backup-automation** module into your Terraform infrastructure, follow these steps:
+To incorporate the **terraform-aws-scheduled-ec2-ami-backup-automation** module into your Terraform infrastructure, follow these steps:
 
 - **Module Configuration:** Specify the module configuration by utilizing the module block.
 ```terraform
 module "ami_scheduled_backup" {
-  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
+  source = "git::https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
 
   name                = var.name
   environment         = var.environment
@@ -44,7 +44,7 @@ By following these steps, you can easily integrate the module into your Terrafor
 
 ## Dependencies and Prerequisites
 
-Before you begin using the **aws-terraform-scheduled-ec2-ami-backup-automation** module, ensure that you have the following dependencies and prerequisites in place:
+Before you begin using the **terraform-aws-scheduled-ec2-ami-backup-automation** module, ensure that you have the following dependencies and prerequisites in place:
 
 1. **Terraform Installed:** Ensure you have Terraform installed on your local machine or the environment where you intend to use this module. You can download and install Terraform from the official [Terraform website](https://www.terraform.io/downloads.html).
 2. **AWS Credentials:** To deploy resources using this module, you need valid AWS credentials configured on your system. Ensure you have AWS access key and secret key information set up either through environment variables, the AWS CLI configuration, or an AWS credentials file.
@@ -52,13 +52,13 @@ Before you begin using the **aws-terraform-scheduled-ec2-ami-backup-automation**
 
 ## Example Module Usage
 
-To illustrate how the **aws-terraform-scheduled-ec2-ami-backup-automation** module can be used, consider the following example:
+To illustrate how the **terraform-aws-scheduled-ec2-ami-backup-automation** module can be used, consider the following example:
 
 Suppose you want to create a scheduled backup solution for your production EC2 instances in the `us-east-1` region. You want to back up instances with the `Backup-AZ-A` tag and retain the backups for `7 days`. The backups should be scheduled to occur at `8:00pm UTC daily`.
 
 ```terraform
 module "ami_scheduled_backup" {
-  source = "git::https://github.com/mikmorley/aws-terraform-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
+  source = "git::https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation.git?ref=v1.1.0"
 
   name                = "ami-backups-az-a"
   environment         = "Production"
@@ -79,7 +79,7 @@ Adapt this example to fit your environment, tagging strategy, and backup retenti
 
 ## Expected Variables
 
-To effectively configure and utilize the **aws-terraform-scheduled-ec2-ami-backup-automation** module, you need to provide values for the following variables:
+To effectively configure and utilize the **terraform-aws-scheduled-ec2-ami-backup-automation** module, you need to provide values for the following variables:
 
 |Variable|Description|
 |---|---|
@@ -94,7 +94,7 @@ To effectively configure and utilize the **aws-terraform-scheduled-ec2-ami-backu
 
 ## Tagging Guidelines
 
-Tagging plays a crucial role in the operation of the **aws-terraform-scheduled-ec2-ami-backup-automation** module. To ensure successful backup automation, follow these guidelines when applying tags to your EC2 instances:
+Tagging plays a crucial role in the operation of the **terraform-aws-scheduled-ec2-ami-backup-automation** module. To ensure successful backup automation, follow these guidelines when applying tags to your EC2 instances:
 
 - **Backup Tag:** Specify the tag that will be assigned to EC2 instances you want to include in the backup process. The `backup_tag` variable is used to filter instances for backup. **By default, the tag value is set to "Backup"**. However, you can customize this value to match your tagging strategy.
 - **Tag Value:** For instances that are to be backed up, set the value of the specified `backup_tag` to `yes`. This tag value acts as a signal to the module that the instance should be included in the backup automation process. Instances without this tag value will not be backed up.
@@ -124,7 +124,7 @@ Adapt these expressions to your preferred backup schedule. The `schedule_express
 
 ## Contributing Guidelines
 
-Contributions to the **aws-terraform-scheduled-ec2-ami-backup-automation** module are welcome and encouraged! If you'd like to contribute, please follow these guidelines:
+Contributions to the **terraform-aws-scheduled-ec2-ami-backup-automation** module are welcome and encouraged! If you'd like to contribute, please follow these guidelines:
 
 1. Fork the repository to your GitHub account.
 2. Create a new branch for your changes.
@@ -137,6 +137,6 @@ Please ensure that your contributions align with the module's scope and purpose.
 
 ## License Information
 
-The **aws-terraform-scheduled-ec2-ami-backup-automation** module is distributed under the MIT License. Feel free to use and modify this module according to your needs. You can find the complete license text in the LICENSE file.
+The **terraform-aws-scheduled-ec2-ami-backup-automation** module is distributed under the MIT License. Feel free to use and modify this module according to your needs. You can find the complete license text in the LICENSE file.
 
 By using this module, you agree to the terms and conditions outlined in the MIT License.
