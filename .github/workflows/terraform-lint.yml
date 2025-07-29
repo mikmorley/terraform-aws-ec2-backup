@@ -164,6 +164,7 @@ jobs:
       with:
         format: json
         soft_fail: true
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run Checkov
       uses: bridgecrewio/checkov-action@master
@@ -172,6 +173,8 @@ jobs:
         framework: terraform
         output_format: json
         soft_fail: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 ##############################################################################
 # Terraform Plan Test
@@ -293,7 +296,7 @@ jobs:
         fi
         
         # Check for required sections
-        if grep -q "## Usage" README.md; then
+        if grep -q "## 📋 Quick Start\|## Usage" README.md; then
           echo "✅ Usage section found"
         else
           echo "❌ Usage section missing"
