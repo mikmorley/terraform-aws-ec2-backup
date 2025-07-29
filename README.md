@@ -281,7 +281,7 @@ Contributions are welcome! Please:
 ### Development Setup
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/terraform-aws-ec2-backup.git
+git clone https://github.com/mikmorley/terraform-aws-ec2-backup.git
 
 # Create feature branch
 git checkout -b feature/your-feature-name
