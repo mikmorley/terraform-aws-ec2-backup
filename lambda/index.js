@@ -1,5 +1,20 @@
-const aws = require('aws-sdk');
-const ec2 = new aws.EC2();
+const { 
+    EC2Client, 
+    DescribeInstancesCommand,
+    CreateImageCommand,
+    DescribeImagesCommand,
+    DeregisterImageCommand,
+    DescribeSnapshotsCommand,
+    DeleteSnapshotCommand
+} = require('@aws-sdk/client-ec2');
+
+const { 
+    CloudWatchClient, 
+    PutMetricDataCommand 
+} = require('@aws-sdk/client-cloudwatch');
+
+const ec2 = new EC2Client({});
+const cloudWatch = new CloudWatchClient({});
 const helpers = require('aws-lambda-nodejs-helpers');
 const config = helpers.getConfig(process.env, [
     'backup_tag',
@@ -10,90 +25,149 @@ const image_date_tag = "BackupDate";
 let backup_instances_arr = [];
 let image_deletion_arr = [];
 
+// Metrics tracking
+let metrics = {
+    backupsAttempted: 0,
+    backupsSuccessful: 0,
+    backupsFailed: 0,
+    amisCreated: 0,
+    amis: 0,
+    snapshotsDeleted: 0,
+    errors: []
+};
+
 exports.handler = handler;
 async function handler(event, context) {
+    const startTime = Date.now();
+    
+    try {
+        console.log('Starting AMI backup process...');
+        
+        // Reset metrics for this execution
+        metrics = {
+            backupsAttempted: 0,
+            backupsSuccessful: 0,
+            backupsFailed: 0,
+            amisCreated: 0,
+            amisDeleted: 0,
+            snapshotsDeleted: 0,
+            errors: []
+        };
 
-    // Get instances and save to array
-    await getInstanceDetails(config.backup_tag);
+        // Get instances and save to array
+        console.log('Discovering instances to backup...');
+        await getInstanceDetails(config.backup_tag);
+        console.log(`Found ${backup_instances_arr.length} instances to backup`);
 
-    // If array is not empty, create AMI snapshots
-    if (backup_instances_arr.length > 0) {
-        await createAMISnapshots();
-    }
+        // If array is not empty, create AMI snapshots
+        if (backup_instances_arr.length > 0) {
+            metrics.backupsAttempted = backup_instances_arr.length;
+            await createAMISnapshots();
+        }
 
-    // Get existing images and save to array
-    await getAMIDetails();
+        // Get existing images and save to array
+        console.log('Checking for AMIs to clean up...');
+        await getAMIDetails();
+        console.log(`Found ${image_deletion_arr.length} AMIs to evaluate for cleanup`);
 
-    // If array is not empty, analyse images to determine if retention time has passed.
-    if (image_deletion_arr.length > 0) {
-
-        for (let i = 0; i < image_deletion_arr.length; i++) {
-            let days_since_backup = dateDiff(image_deletion_arr[i].image_backup_date);
-            if (days_since_backup > config.backup_retention) {
-                let image_id = image_deletion_arr[i].image_id;
-                let image_name = image_deletion_arr[i].image_name;
-                let image_backup_date = image_deletion_arr[i].image_backup_date;
-                console.log("Retention time has passed for:", image_name);
-                await deleteBackup(image_id, image_name, image_backup_date);
+        // If array is not empty, analyse images to determine if retention time has passed.
+        if (image_deletion_arr.length > 0) {
+            for (let i = 0; i < image_deletion_arr.length; i++) {
+                let days_since_backup = dateDiff(image_deletion_arr[i].image_backup_date);
+                if (days_since_backup > config.backup_retention) {
+                    let image_id = image_deletion_arr[i].image_id;
+                    let image_name = image_deletion_arr[i].image_name;
+                    let image_backup_date = image_deletion_arr[i].image_backup_date;
+                    console.log(`Retention time has passed for: ${image_name} (${days_since_backup} days old)`);
+                    await deleteBackup(image_id, image_name, image_backup_date);
+                }
             }
         }
-    }
 
+        // Publish success metrics
+        const duration = Date.now() - startTime;
+        await publishMetrics(duration, true);
+        
+        console.log('AMI backup process completed successfully');
+        console.log(`Summary: ${metrics.backupsSuccessful}/${metrics.backupsAttempted} backups successful, ${metrics.amisCreated} AMIs created, ${metrics.amisDeleted} AMIs deleted, ${metrics.snapshotsDeleted} snapshots deleted`);
+        
+        return {
+            statusCode: 200,
+            body: {
+                message: 'Backup process completed successfully',
+                metrics: metrics
+            }
+        };
+
+    } catch (error) {
+        console.error('AMI backup process failed:', error);
+        metrics.errors.push(error.message);
+        
+        // Publish failure metrics
+        const duration = Date.now() - startTime;
+        await publishMetrics(duration, false);
+        
+        // Re-throw the error so Lambda marks the execution as failed
+        throw error;
+    }
 }
 
 async function deleteBackup(image_id, image_name, image_backup_date) {
+    try {
+        // Remove AMI
+        const deregisterCommand = new DeregisterImageCommand({
+            ImageId: image_id
+        });
+        let remove_ami = await ec2.send(deregisterCommand);
+        console.log(`AMI deregistered successfully: ${image_id}`);
+        metrics.amisDeleted++;
 
-    // Remove AMI
-    let ami_params = {
-        ImageId: image_id
-    };
-    let remove_ami = await ec2.deregisterImage(ami_params).promise();
-    console.log("remove_ami", remove_ami);
+        // Identify Associated Snapshots
+        const describeSnapshotsCommand = new DescribeSnapshotsCommand({
+            Filters: [
+                {
+                    Name: "tag:Name",
+                    Values: [image_name]
+                },
+                {
+                    Name: "tag:BackupDate", 
+                    Values: [image_backup_date]
+                }
+            ]
+        });
+        let describe_snapshots = await ec2.send(describeSnapshotsCommand);
+        console.log(`Found ${describe_snapshots.Snapshots.length} snapshots to delete`);
 
-    // Identify Associated Snapshots
-    let snapshot_params = {
-        Filters: [
-            {
-                Name: "tag:Name",
-                Values: [
-                    image_name
-                ]
-            },
-            {
-                Name: "tag:BackupDate",
-                Values: [
-                    image_backup_date
-                ]
-            }
-        ]
-    };
-    let describe_snapshots = await ec2.describeSnapshots(snapshot_params).promise();
-    console.log("describe_snapshots", describe_snapshots);
+        // Delete Snapshot(s)
+        for (let i = 0; i < describe_snapshots.Snapshots.length; i++) {
+            let snapshot_id = describe_snapshots.Snapshots[i].SnapshotId;
+            const deleteSnapshotCommand = new DeleteSnapshotCommand({
+                SnapshotId: snapshot_id
+            });
+            let delete_snapshot = await ec2.send(deleteSnapshotCommand);
+            console.log(`Snapshot deleted successfully: ${snapshot_id}`);
+            metrics.snapshotsDeleted++;
+        }
 
-    // Delete Snapshot(s)
-    for (let i = 0; i < describe_snapshots.Snapshots.length; i++) {
-        let snapshot_id = describe_snapshots.Snapshots[i].SnapshotId;
-        let delete_snapshot_params = {
-            SnapshotId: snapshot_id
-        };
-        let delete_snapshot = await ec2.deleteSnapshot(delete_snapshot_params).promise();
-        console.log("delete_snapshot", delete_snapshot);
+        return "Done";
+    } catch (error) {
+        console.error(`Error deleting backup ${image_name}:`, error);
+        metrics.errors.push(`Failed to delete backup ${image_name}: ${error.message}`);
+        throw error;
     }
-
-    return "Done";
 }
 
 async function getInstanceDetails(backup_tag) {
 
-    let params = {
+    const describeInstancesCommand = new DescribeInstancesCommand({
         Filters: [
             {
                 Name: "tag:" + backup_tag,
                 Values: ["yes"]
             }
         ]
-    };
-    let instance_details = await ec2.describeInstances(params).promise();
+    });
+    let instance_details = await ec2.send(describeInstancesCommand);
 
     for (let i = 0; i < instance_details.Reservations.length; i++) {
 
@@ -180,8 +254,21 @@ async function createAMISnapshots() {
         // If image already exists, skip.
         let image_exist_check = await checkAMIExists(image_name);
         if (image_exist_check.length < 1) {
-            let create_image = await ec2.createImage(params).promise();
-            console.log(create_image);
+            try {
+                const createImageCommand = new CreateImageCommand(params);
+                let create_image = await ec2.send(createImageCommand);
+                console.log(`AMI created successfully: ${create_image.ImageId} for instance ${instance_id}`);
+                metrics.amisCreated++;
+                metrics.backupsSuccessful++;
+            } catch (error) {
+                console.error(`Failed to create AMI for instance ${instance_id}:`, error);
+                metrics.backupsFailed++;
+                metrics.errors.push(`Failed to create AMI for ${instance_name}: ${error.message}`);
+                // Continue with other instances rather than failing completely
+            }
+        } else {
+            console.log(`AMI already exists for ${instance_name}, skipping`);
+            metrics.backupsSuccessful++; // Count as successful since backup exists
         }
 
     }
@@ -191,22 +278,22 @@ async function createAMISnapshots() {
 
 async function checkAMIExists(image_name) {
 
-    let params = {
+    const describeImagesCommand = new DescribeImagesCommand({
         Filters: [
             {
                 Name: 'name',
                 Values: [image_name]
             },
         ],
-    };
-    let image_exists = await ec2.describeImages(params).promise();
+    });
+    let image_exists = await ec2.send(describeImagesCommand);
 
     return image_exists.Images;
 }
 
 async function getAMIDetails() {
 
-    let params = {
+    const describeImagesCommand = new DescribeImagesCommand({
         Filters: [
             {
                 Name: 'tag-key',
@@ -216,8 +303,8 @@ async function getAMIDetails() {
                 ]
             }
         ],
-    };
-    let amis = await ec2.describeImages(params).promise();
+    });
+    let amis = await ec2.send(describeImagesCommand);
 
     for (let i = 0; i < amis.Images.length; i++) {
 
@@ -272,4 +359,98 @@ function dateDiff(date_string) {
     console.log("diffDays", diffDays);
 
     return diffDays;
+}
+
+async function publishMetrics(duration, success) {
+    try {
+        const namespace = 'AWS/Lambda/AMIBackup';
+        const timestamp = new Date();
+        
+        const metricData = [
+            {
+                MetricName: 'ExecutionDuration',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: duration,
+                Unit: 'Milliseconds',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'BackupsAttempted',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.backupsAttempted,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'BackupsSuccessful',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.backupsSuccessful,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'BackupsFailed',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.backupsFailed,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'AMIsCreated',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.amisCreated,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'AMIsDeleted',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.amisDeleted,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'SnapshotsDeleted',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: metrics.snapshotsDeleted,
+                Unit: 'Count',
+                Timestamp: timestamp
+            },
+            {
+                MetricName: 'ExecutionSuccess',
+                Dimensions: [
+                    { Name: 'FunctionName', Value: process.env.AWS_LAMBDA_FUNCTION_NAME || 'ami-backup' }
+                ],
+                Value: success ? 1 : 0,
+                Unit: 'Count',
+                Timestamp: timestamp
+            }
+        ];
+
+        const command = new PutMetricDataCommand({
+            Namespace: namespace,
+            MetricData: metricData
+        });
+
+        await cloudWatch.send(command);
+        console.log('Custom metrics published successfully');
+        
+    } catch (error) {
+        console.error('Failed to publish custom metrics:', error);
+        // Don't throw error here as metrics publishing failure shouldn't fail the backup
+    }
 }
