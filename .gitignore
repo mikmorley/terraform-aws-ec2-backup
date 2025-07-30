@@ -30,3 +30,10 @@ override.tf.json
 
 # Ignore node_modules
 **/node_modules
+
+# Ignore Lambda deployment packages (built at runtime)
+zip/
+*.zip
+
+*UDE.md
+*REGISTRY.md

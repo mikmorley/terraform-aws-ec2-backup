@@ -1,23 +1,24 @@
 {
-  "name": "aws-terraform-scheduled-ec2-ami-backup",
-  "version": "1.0.0",
-  "description": "Custom terraform module to deploy scheduled EC2 AMI backup automation.",
+  "name": "terraform-aws-ec2-backup",
+  "version": "2.0.0",
+  "description": "Production-ready Terraform module for automated EC2 backup management.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation.git"
+    "url": "git+https://github.com/mikmorley/terraform-aws-ec2-backup.git"
   },
   "author": "Michael Morley",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation/issues"
+    "url": "https://github.com/mikmorley/terraform-aws-ec2-backup/issues"
   },
-  "homepage": "https://github.com/mikmorley/terraform-aws-scheduled-ec2-ami-backup-automation#readme",
+  "homepage": "https://github.com/mikmorley/terraform-aws-ec2-backup#readme",
   "dependencies": {
     "aws-lambda-nodejs-helpers": "^0.3.2",
-    "aws-sdk": "^2.100.0"
+    "@aws-sdk/client-ec2": "^3.0.0",
+    "@aws-sdk/client-cloudwatch": "^3.0.0"
   }
 }
