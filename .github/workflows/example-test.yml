@@ -94,28 +94,9 @@ jobs:
       working-directory: ./example-test
       run: terraform validate -no-color
 
-    - name: Terraform Plan
-      id: plan
-      working-directory: ./example-test
-      run: terraform plan -no-color -input=false
-      continue-on-error: true
-
-    - name: Display Plan Summary
-      run: |
-        echo "### Example Configuration Test Results ###"
-        echo ""
-        echo "**Terraform Init:** ${{ steps.init.outcome }}"
-        echo "**Terraform Validate:** ${{ steps.validate.outcome }}"
-        echo "**Terraform Plan:** ${{ steps.plan.outcome }}"
-        echo ""
-        if [ "${{ steps.plan.outcome }}" == "success" ]; then
-          echo "Example configuration plan succeeded"
-        else
-          echo "Example configuration plan failed"
-        fi
-
     - name: Fail if plan failed
       if: steps.plan.outcome == 'failure'
       run: |
         echo "Terraform plan failed for example configuration"
+        echo "Review the plan output above for details"
         exit 1
