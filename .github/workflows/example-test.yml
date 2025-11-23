@@ -1,0 +1,121 @@
+name: Example Configuration Test
+
+on:
+  # Run every 5 minutes for testing
+  schedule:
+    - cron: '*/5 * * * *'
+  # Allow manual trigger for testing
+  workflow_dispatch:
+  # Also run on push to main/develop for validation
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'example/**'
+      - '*.tf'
+      - 'lambda/**'
+
+env:
+  TF_VERSION: "1.6.0"
+
+jobs:
+  example-plan-test:
+    name: "Example Configuration Plan Test"
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Create test configuration
+      run: |
+        # Create a test directory for the example
+        mkdir -p example-test
+        cd example-test
+
+        # Create a provider configuration and modify the example to use local source
+        cat > main.tf << 'EOF'
+        terraform {
+          required_version = ">= 1.0"
+          required_providers {
+            aws = {
+              source  = "hashicorp/aws"
+              version = ">= 4.0"
+            }
+          }
+        }
+
+        provider "aws" {
+          region = "us-east-1"
+          # Skip credentials for plan-only test
+          skip_credentials_validation = true
+          skip_metadata_api_check     = true
+          skip_region_validation      = true
+          skip_requesting_account_id  = true
+        }
+
+        module "ec2_backup" {
+          source = "mikmorley/ec2-backup/aws"
+          version = "~> 2.0"
+
+          # Required variables
+          name                = "example-backup-system"
+          environment         = "production"
+          region              = "us-east-1"
+          schedule_expression = "cron(0 2 * * ? *)"  # Daily at 2 AM UTC
+
+          # Optional customization
+          backup_tag          = "AutoBackup"
+          backup_retention    = 7
+
+          # Enhanced monitoring (optional)
+          enable_monitoring    = true
+          create_sns_topic     = true
+          notification_email   = "alerts@example.com"
+
+          # Advanced tagging
+          cost_center         = "Infrastructure"
+          project_name        = "Production-Backups"
+          owner               = "DevOps-Team"
+        }
+        EOF
+
+    - name: Terraform Init
+      id: init
+      working-directory: ./example-test
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      working-directory: ./example-test
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+      working-directory: ./example-test
+      run: terraform plan -no-color -input=false
+      continue-on-error: true
+
+    - name: Display Plan Summary
+      run: |
+        echo "### Example Configuration Test Results ###"
+        echo ""
+        echo "**Terraform Init:** ${{ steps.init.outcome }}"
+        echo "**Terraform Validate:** ${{ steps.validate.outcome }}"
+        echo "**Terraform Plan:** ${{ steps.plan.outcome }}"
+        echo ""
+        if [ "${{ steps.plan.outcome }}" == "success" ]; then
+          echo "Example configuration plan succeeded"
+        else
+          echo "Example configuration plan failed"
+        fi
+
+    - name: Fail if plan failed
+      if: steps.plan.outcome == 'failure'
+      run: |
+        echo "Terraform plan failed for example configuration"
+        exit 1
