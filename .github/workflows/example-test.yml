@@ -82,6 +82,13 @@ jobs:
           project_name        = "Production-Backups"
           owner               = "DevOps-Team"
         }
+
+        module "secure_website" {
+          source = "mikmorley/static-website/aws"
+
+          name        = "test-website""
+          environment = "production"
+        }
         EOF
 
     - name: Terraform Init
