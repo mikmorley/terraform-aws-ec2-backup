@@ -1,9 +1,9 @@
 name: Example Configuration Test
 
 on:
-  # Run every 5 minutes for testing
+  # Run every hour for testing
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '0 * * * *'
   # Allow manual trigger for testing
   workflow_dispatch:
   # Also run on push to main/develop for validation
@@ -86,7 +86,7 @@ jobs:
         module "secure_website" {
           source = "mikmorley/static-website/aws"
 
-          name        = "test-website""
+          name        = "test-website"
           environment = "production"
         }
         EOF
