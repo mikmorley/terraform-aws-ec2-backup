@@ -1,9 +1,9 @@
 name: Example Configuration Test
 
 on:
-  # Run every hour for testing
+  # Run every 6 hours for testing
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 */6 * * *'
   # Allow manual trigger for testing
   workflow_dispatch:
   # Also run on push to main/develop for validation
