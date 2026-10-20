@@ -44,8 +44,8 @@ data "aws_iam_policy_document" "default" {
       "cloudtrail:LookupEvents"
     ]
     resources = ["*"]
-    effect = "Allow"
-    
+    effect    = "Allow"
+
     # Limit to specific event types related to EC2
     condition {
       test     = "StringEquals"
@@ -68,8 +68,8 @@ data "aws_iam_policy_document" "default" {
       "ec2:DescribeSnapshots"
     ]
     resources = ["*"]
-    effect = "Allow"
-    
+    effect    = "Allow"
+
     # Limit to current region
     condition {
       test     = "StringEquals"
@@ -106,7 +106,7 @@ data "aws_iam_policy_document" "default" {
       "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:snapshot/*"
     ]
     effect = "Allow"
-    
+
     # Only allow tagging during resource creation
     condition {
       test     = "StringEquals"
@@ -130,7 +130,7 @@ data "aws_iam_policy_document" "default" {
       "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:snapshot/*"
     ]
     effect = "Allow"
-    
+
     # Only allow deletion of resources created by this backup system
     condition {
       test     = "StringEquals"
@@ -160,8 +160,8 @@ data "aws_iam_policy_document" "default" {
       "cloudwatch:PutMetricData"
     ]
     resources = ["*"]
-    effect = "Allow"
-    
+    effect    = "Allow"
+
     # Limit to custom namespace for this application
     condition {
       test     = "StringEquals"
@@ -190,7 +190,7 @@ data "aws_iam_policy_document" "default" {
       "xray:PutTelemetryRecords"
     ]
     resources = ["*"]
-    effect = "Allow"
+    effect    = "Allow"
   }
 }
 
@@ -259,11 +259,11 @@ resource "terraform_data" "lambda_package" {
 # Dead Letter Queue for failed Lambda executions
 resource "aws_sqs_queue" "lambda_dlq" {
   count = var.enable_monitoring ? 1 : 0
-  
+
   name                       = "${var.name}-${var.region}-dlq"
-  message_retention_seconds  = 1209600  # 14 days
-  visibility_timeout_seconds = var.timeout * 6  # 6x Lambda timeout
-  
+  message_retention_seconds  = 1209600         # 14 days
+  visibility_timeout_seconds = var.timeout * 6 # 6x Lambda timeout
+
   tags = merge({
     Name        = "${var.name}-${var.region}-dlq"
     Environment = var.environment
@@ -273,17 +273,17 @@ resource "aws_sqs_queue" "lambda_dlq" {
 
 resource "aws_lambda_function" "default" {
   depends_on = [terraform_data.lambda_package]
-  
-  function_name = "${var.name}-${var.region}"
-  description   = "EC2 AMI Backup Automation with enhanced monitoring"
-  role          = aws_iam_role.default.arn
-  handler       = "index.handler"
-  runtime       = "nodejs20.x"
-  timeout       = var.timeout
-  memory_size   = 512  # Increased from 128MB for better performance
-  filename      = "${path.module}/zip/lambda_function.zip"
+
+  function_name    = "${var.name}-${var.region}"
+  description      = "EC2 AMI Backup Automation with enhanced monitoring"
+  role             = aws_iam_role.default.arn
+  handler          = "index.handler"
+  runtime          = "nodejs20.x"
+  timeout          = var.timeout
+  memory_size      = 512 # Increased from 128MB for better performance
+  filename         = "${path.module}/zip/lambda_function.zip"
   source_code_hash = terraform_data.lambda_package.id
-  
+
   # Dead letter queue configuration
   dynamic "dead_letter_config" {
     for_each = var.enable_monitoring ? [1] : []
@@ -291,7 +291,7 @@ resource "aws_lambda_function" "default" {
       target_arn = aws_sqs_queue.lambda_dlq[0].arn
     }
   }
-  
+
   # Enable X-Ray tracing for debugging
   tracing_config {
     mode = "Active"
@@ -336,7 +336,7 @@ resource "aws_cloudwatch_event_target" "default" {
 # SNS Topic for notifications (optional)
 resource "aws_sns_topic" "backup_notifications" {
   count = var.create_sns_topic ? 1 : 0
-  
+
   name         = "${var.name}-${var.region}-notifications"
   display_name = "AMI Backup Notifications"
 
@@ -349,7 +349,7 @@ resource "aws_sns_topic" "backup_notifications" {
 
 resource "aws_sns_topic_subscription" "email_notification" {
   count = var.create_sns_topic && var.notification_email != "" ? 1 : 0
-  
+
   topic_arn = aws_sns_topic.backup_notifications[0].arn
   protocol  = "email"
   endpoint  = var.notification_email
@@ -360,30 +360,30 @@ locals {
   sns_topic_arn = var.sns_topic_arn != "" ? var.sns_topic_arn : (
     var.create_sns_topic ? aws_sns_topic.backup_notifications[0].arn : ""
   )
-  
+
   # Comprehensive default tags applied to all resources
   common_tags = merge({
-    Name           = var.name
-    Environment    = var.environment
-    Region         = var.region
-    ManagedBy      = "Terraform"
-    Module         = "ami-backup-automation"
-    BackupTag      = var.backup_tag
-    RetentionDays  = tostring(var.backup_retention)
-  }, 
-  var.cost_center != "" ? { CostCenter = var.cost_center } : {},
-  var.project_name != "" ? { Project = var.project_name } : {},
-  var.owner != "" ? { Owner = var.owner } : {},
+    Name          = var.name
+    Environment   = var.environment
+    Region        = var.region
+    ManagedBy     = "Terraform"
+    Module        = "ami-backup-automation"
+    BackupTag     = var.backup_tag
+    RetentionDays = tostring(var.backup_retention)
+    },
+    var.cost_center != "" ? { CostCenter = var.cost_center } : {},
+    var.project_name != "" ? { Project = var.project_name } : {},
+    var.owner != "" ? { Owner = var.owner } : {},
   var.default_tags)
 }
 
 # CloudWatch Alarms (if monitoring is enabled)
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   count = var.enable_monitoring ? 1 : 0
-  
+
   alarm_name        = "${var.name}-${var.region}-lambda-errors"
   alarm_description = "Lambda function errors for AMI backup"
-  
+
   metric_name         = "Errors"
   namespace           = "AWS/Lambda"
   statistic           = "Sum"
@@ -391,14 +391,14 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  
+
   dimensions = {
     FunctionName = aws_lambda_function.default.function_name
   }
-  
+
   alarm_actions = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
   ok_actions    = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
-  
+
   tags = merge({
     Name        = "${var.name}-${var.region}-lambda-errors"
     Environment = var.environment
@@ -408,25 +408,25 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 
 resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   count = var.enable_monitoring ? 1 : 0
-  
+
   alarm_name        = "${var.name}-${var.region}-lambda-duration"
   alarm_description = "Lambda function duration approaching timeout"
-  
+
   metric_name         = "Duration"
   namespace           = "AWS/Lambda"
   statistic           = "Average"
   period              = 300
   evaluation_periods  = 2
-  threshold           = var.timeout * 1000 * 0.8  # 80% of timeout (convert to milliseconds)
+  threshold           = var.timeout * 1000 * 0.8 # 80% of timeout (convert to milliseconds)
   comparison_operator = "GreaterThanThreshold"
-  
+
   dimensions = {
     FunctionName = aws_lambda_function.default.function_name
   }
-  
+
   alarm_actions = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
   ok_actions    = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
-  
+
   tags = merge({
     Name        = "${var.name}-${var.region}-lambda-duration"
     Environment = var.environment
@@ -436,10 +436,10 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
 
 resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   count = var.enable_monitoring ? 1 : 0
-  
+
   alarm_name        = "${var.name}-${var.region}-lambda-throttles"
   alarm_description = "Lambda function throttling detected"
-  
+
   metric_name         = "Throttles"
   namespace           = "AWS/Lambda"
   statistic           = "Sum"
@@ -447,14 +447,14 @@ resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  
+
   dimensions = {
     FunctionName = aws_lambda_function.default.function_name
   }
-  
+
   alarm_actions = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
   ok_actions    = local.sns_topic_arn != "" ? [local.sns_topic_arn] : []
-  
+
   tags = merge({
     Name        = "${var.name}-${var.region}-lambda-throttles"
     Environment = var.environment
