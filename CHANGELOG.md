@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Module outputs (`outputs.tf`) for the Lambda function, IAM role, event rule, log group, SNS topic, and Dead Letter Queue
+- `examples/basic` and `examples/complete`, validated in CI
+- Dependabot configuration for npm, GitHub Actions, and Terraform
+
+### Changed
+- Documentation and CI messages no longer use emojis or promotional wording
+- GitHub Actions updated to Node 24 releases, Terraform CI version raised to 1.9.8, runners pinned to `ubuntu-24.04`
+- Lambda dependencies updated to clear audit findings
+
 ## [2.0.0] - 2025-01-29
 
 ### Major Changes

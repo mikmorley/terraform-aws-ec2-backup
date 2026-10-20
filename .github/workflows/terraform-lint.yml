@@ -40,6 +40,14 @@ jobs:
       id: validate
       run: terraform validate -no-color
 
+    - name: Validate examples
+      run: |
+        for dir in examples/*/; do
+          echo "Validating $dir"
+          terraform -chdir="$dir" init -backend=false
+          terraform -chdir="$dir" validate -no-color
+        done
+
     - name: Comment on PR - Terraform Results
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v9
