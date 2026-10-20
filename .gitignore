@@ -36,4 +36,4 @@ zip/
 *.zip
 
 *UDE.md
-*REGISTRY.md
+*REGISTRY.md.terraform.lock.hcl

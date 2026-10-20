@@ -82,6 +82,27 @@ resource "aws_instance" "web" {
 
 The tag value must be exactly `"yes"`.
 
+## Examples
+
+Runnable configurations live in [`examples/`](examples):
+
+- [`basic`](examples/basic): required variables only
+- [`complete`](examples/complete): custom tag, retention, monitoring, SNS email, and cost tags
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `lambda_function_arn` | ARN of the backup Lambda function |
+| `lambda_function_name` | Name of the backup Lambda function |
+| `iam_role_arn` | ARN of the Lambda IAM role |
+| `iam_role_name` | Name of the Lambda IAM role |
+| `cloudwatch_event_rule_arn` | ARN of the schedule rule |
+| `cloudwatch_log_group_name` | Lambda log group name |
+| `sns_topic_arn` | SNS topic ARN (created or supplied), empty string if none |
+| `dead_letter_queue_arn` | DLQ ARN, `null` when monitoring is disabled |
+| `dead_letter_queue_url` | DLQ URL, `null` when monitoring is disabled |
+
 ## Monitoring and Metrics
 
 The Lambda function publishes these metrics to the `AWS/Lambda/AMIBackup` namespace:
