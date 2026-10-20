@@ -2,11 +2,11 @@
 
 ## Automated Build Process
 
-**Note**: As of the latest version, Lambda packages are built automatically at runtime during Terraform deployment. The zip file is no longer committed to the repository.
+Terraform builds the Lambda package during deployment. The zip file is not committed to the repository.
 
 ## Manual (Re)Build of Lambda Package (Development)
 
-For development and testing purposes, you can manually rebuild the Lambda package:
+To rebuild the Lambda package by hand during development:
 
 ```bash
 #!/bin/bash
@@ -41,8 +41,8 @@ During Terraform deployment, the Lambda package is built using the `terraform_da
 5. Clean up build directory (keeping source clean)
 6. Calculate source code hash for change detection
 
-**Benefits:**
-- No zip files committed to repository
-- Source directory remains clean
-- Fresh build on every deployment
-- Production dependencies only
+Because of this build step:
+- No zip files are committed
+- The source directory stays clean
+- Each deployment gets a fresh build
+- Only production dependencies ship
