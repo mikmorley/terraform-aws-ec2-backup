@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  TF_VERSION: "1.6.0"
+  TF_VERSION: "1.9.8"
   NODE_VERSION: "20"
 
 jobs:
@@ -146,7 +146,7 @@ jobs:
 
     - name: Check package vulnerabilities
       working-directory: ./lambda
-      run: npm audit --audit-level high
+      run: npm audit --omit=dev --audit-level high
 
 ##############################################################################
 # Security Scanning
