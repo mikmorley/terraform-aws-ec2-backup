@@ -2,50 +2,23 @@
 
 # terraform-aws-ec2-backup
 
-A **production-ready** Terraform module for automated EC2 backup management with enterprise-grade security, monitoring, and reliability features. This module automates the creation of Amazon Machine Images (AMIs) and associated snapshots at scheduled intervals, with comprehensive error handling, least-privilege IAM permissions, and advanced monitoring capabilities.
+A Terraform module that creates scheduled AMI backups of tagged EC2 instances and deletes them after a retention period. A Lambda function (Node.js 20.x, AWS SDK v3) runs on a CloudWatch Events schedule, creates an AMI and its snapshots for each tagged instance, and removes backups older than `backup_retention` days.
 
-## ✨ Key Features
+## Features
 
-- 🔒 **Enhanced Security**: Least-privilege IAM policies with scoped permissions and conditional access
-- 📊 **Comprehensive Monitoring**: CloudWatch alarms, custom metrics, and SNS notifications
-- 🛡️ **Reliability**: Dead Letter Queue (DLQ), X-Ray tracing, and graceful error handling
-- ⚡ **Modern Architecture**: Node.js 20.x runtime, AWS SDK v3, and optimized performance
-- 🏷️ **Advanced Tagging**: Cost center tracking, project organization, and compliance support
-- 🔄 **Dynamic Building**: Runtime Lambda package creation with no committed artifacts
+- Least-privilege IAM policies scoped to the current account and region
+- CloudWatch alarms, 8 custom metrics, and optional SNS email alerts
+- Dead Letter Queue and X-Ray tracing for failed or slow runs
+- A failed backup for one instance does not stop the others
+- Cost center, project, and owner tags
+- The Lambda package is built during `terraform apply`, so no artifacts are committed
 
-## 🚀 What's New
-
-This module has been completely modernized with enterprise-grade features:
-
-### Security Enhancements
-- **Least-privilege IAM**: Scoped to current account/region with conditional access
-- **Resource-specific permissions**: No more broad `"*"` permissions
-- **Backup-tagged resources only**: Can only delete resources created by this system
-
-### Monitoring & Observability  
-- **8 custom CloudWatch metrics**: Success rates, performance, resource counts
-- **Intelligent alerting**: Lambda errors, duration, and throttling alarms
-- **SNS notifications**: Email alerts for backup failures (optional)
-- **X-Ray tracing**: Detailed execution analysis and debugging
-
-### Reliability & Performance
-- **Dead Letter Queue**: Captures failed executions for analysis
-- **Enhanced error handling**: Individual failures don't stop entire process
-- **512MB memory**: 4x performance improvement over previous versions
-- **Graceful degradation**: Continues processing if individual backups fail
-
-### Modern Architecture
-- **Node.js 20.x LTS**: Latest supported runtime (upgraded from deprecated 12.x)
-- **AWS SDK v3**: 75% smaller bundle size with modular imports
-- **Runtime building**: No pre-built packages committed to repository
-- **Comprehensive logging**: Detailed execution summaries and metrics
-
-## 📋 Quick Start
+## Quick Start
 
 ### Basic Usage
 ```terraform
 module "ec2_backup" {
-  source = "mikmorley/ec2-backup/aws"
+  source  = "mikmorley/ec2-backup/aws"
   version = "~> 2.0"
 
   # Required variables
@@ -57,13 +30,13 @@ module "ec2_backup" {
   # Optional customization
   backup_tag          = "AutoBackup"
   backup_retention    = 7
-  
-  # Enhanced monitoring (optional)
+
+  # Monitoring (optional)
   enable_monitoring    = true
   create_sns_topic     = true
   notification_email   = "alerts@company.com"
-  
-  # Advanced tagging
+
+  # Tagging
   cost_center         = "Infrastructure"
   project_name        = "Production-Backups"
   owner               = "DevOps-Team"
@@ -73,22 +46,22 @@ module "ec2_backup" {
 ### With Existing SNS Topic
 ```terraform
 module "ec2_backup" {
-  source = "mikmorley/ec2-backup/aws"
+  source  = "mikmorley/ec2-backup/aws"
   version = "~> 2.0"
 
   name                = "prod-backup"
   environment         = "production"
   region              = "us-east-1"
   schedule_expression = "cron(0 2 * * ? *)"
-  
+
   # Use existing SNS topic
   sns_topic_arn       = "arn:aws:sns:us-east-1:123456789012:existing-alerts"
 }
 ```
 
-### 🏷️ Tag Your EC2 Instances
+### Tag Your EC2 Instances
 
-Add the backup tag to EC2 instances you want to backup:
+Add the backup tag to each instance you want to back up:
 
 ```bash
 # AWS CLI example
@@ -99,7 +72,7 @@ aws ec2 create-tags \
 # Terraform example
 resource "aws_instance" "web" {
   # ... other configuration ...
-  
+
   tags = {
     Name       = "web-server"
     AutoBackup = "yes"  # This instance will be backed up
@@ -107,11 +80,11 @@ resource "aws_instance" "web" {
 }
 ```
 
-**Important**: The tag value must be exactly `"yes"` for the instance to be included in backups.
+The tag value must be exactly `"yes"`.
 
-## 📊 Monitoring & Metrics
+## Monitoring and Metrics
 
-The module publishes comprehensive metrics to CloudWatch under the `AWS/Lambda/AMIBackup` namespace:
+The Lambda function publishes these metrics to the `AWS/Lambda/AMIBackup` namespace:
 
 | Metric Name | Description | Unit |
 |-------------|-------------|------|
@@ -126,24 +99,24 @@ The module publishes comprehensive metrics to CloudWatch under the `AWS/Lambda/A
 
 ### CloudWatch Alarms
 
-When `enable_monitoring = true`, the module automatically creates alarms for:
-- **Lambda Errors**: Triggers on any Lambda function errors
-- **Lambda Duration**: Alerts when execution time approaches timeout (80% threshold)
-- **Lambda Throttles**: Detects function throttling issues
+With `enable_monitoring = true`, the module creates alarms for:
+- **Lambda Errors**: any function error
+- **Lambda Duration**: execution time above 80% of the timeout
+- **Lambda Throttles**: any throttled invocation
 
-## 🔧 Prerequisites
+## Prerequisites
 
-- **Terraform**: Version 1.0 or later
-- **AWS Provider**: Version 4.0 or later  
-- **AWS Credentials**: Configured via AWS CLI, environment variables, or IAM roles
-- **IAM Permissions**: The deploying user/role needs permissions to create:
+- **Terraform**: 1.0 or later
+- **AWS Provider**: 4.0 or later
+- **AWS Credentials**: configured through the AWS CLI, environment variables, or an IAM role
+- **IAM Permissions**: the deploying user or role must be able to create:
   - Lambda functions and IAM roles
   - CloudWatch Events/EventBridge rules
   - CloudWatch alarms and log groups
   - SNS topics (if creating notifications)
-  - SQS queues (for Dead Letter Queue)
+  - SQS queues (for the Dead Letter Queue)
 
-## 📝 Configuration Variables
+## Configuration Variables
 
 ### Required Variables
 
@@ -182,16 +155,16 @@ When `enable_monitoring = true`, the module automatically creates alarms for:
 
 ### Input Validation
 
-All variables include comprehensive validation:
-- **Email addresses**: Must be valid email format
-- **Environment**: Must be one of: `dev`, `test`, `staging`, `prod`, `production`
-- **Region**: Must be valid AWS region format (e.g., `us-east-1`)
-- **Timeouts**: Must be between 15-900 seconds
-- **Retention**: Must be between 1-365 days
+Variables are validated at plan time:
+- **Email addresses**: valid email format
+- **Environment**: one of `dev`, `test`, `staging`, `prod`, `production`
+- **Region**: valid AWS region format (e.g., `us-east-1`)
+- **Timeout**: 15-900 seconds
+- **Retention**: 1-365 days
 
-## ⏰ Schedule Expressions
+## Schedule Expressions
 
-The `schedule_expression` variable supports both cron and rate expressions:
+`schedule_expression` accepts cron and rate expressions.
 
 ### Cron Examples
 - **Daily at 2 AM UTC**: `cron(0 2 * * ? *)`
@@ -199,84 +172,77 @@ The `schedule_expression` variable supports both cron and rate expressions:
 - **Weekdays at 10 PM UTC**: `cron(0 22 ? * MON-FRI *)`
 - **First day of month at midnight**: `cron(0 0 1 * ? *)`
 
-### Rate Examples  
+### Rate Examples
 - **Every 6 hours**: `rate(6 hours)`
 - **Every 30 minutes**: `rate(30 minutes)`
 - **Every 2 days**: `rate(2 days)`
 
-### Best Practices
-- **Production environments**: Consider off-peak hours (2-4 AM in your region)
-- **Development environments**: Less frequent backups (daily or weekly)
-- **Critical systems**: More frequent backups (every 6-12 hours)
-- **Cost optimization**: Avoid overlapping with high-traffic periods
+### Scheduling Tips
+- **Production**: run during off-peak hours (2-4 AM in your region)
+- **Development**: back up daily or weekly
+- **Critical systems**: back up every 6-12 hours
+- **Cost**: avoid overlapping with high-traffic periods
 
-## 🔒 Security Features
+## Security
 
-### Least-Privilege IAM
-The module implements comprehensive security controls:
-
-- **Scoped permissions**: Limited to current AWS account and region
-- **Resource-specific ARNs**: No broad `"*"` resource permissions
-- **Conditional access**: Can only operate on backup-tagged resources
-- **Action-specific**: Precise permissions for each operation type
-- **Backup verification**: Can only delete resources created by this system
+### IAM
+- Permissions are limited to the current AWS account and region
+- Resource ARNs are specific, with no `"*"` resources
+- Each operation has its own action-level permissions
+- The function can only delete resources it created
 
 ### Resource Protection
-- **Deletion protection**: Only resources with `BackupDate` tag can be deleted
-- **Region isolation**: Operations limited to deployment region
-- **Account isolation**: Cannot access resources in other AWS accounts
+- Only resources with a `BackupDate` tag can be deleted
+- Operations stay inside the deployment region
+- The function cannot touch resources in other AWS accounts
 
-## 🚨 Troubleshooting
-
-### Common Issues
+## Troubleshooting
 
 **No backups are being created:**
 1. Verify EC2 instances have the correct tag (`backup_tag` = `"yes"`)
-2. Check Lambda function logs in CloudWatch
-3. Ensure IAM permissions are correctly applied
+2. Check the Lambda function logs in CloudWatch
+3. Confirm the IAM permissions were applied
 4. Verify the schedule expression is valid
 
 **Backups failing:**
-1. Check CloudWatch alarms for specific error types
-2. Review Lambda function logs for detailed error messages
-3. Verify sufficient IAM permissions for EC2 operations
-4. Check Dead Letter Queue for failed executions
+1. Check CloudWatch alarms for the error type
+2. Read the Lambda function logs for error messages
+3. Verify the IAM role can perform EC2 operations
+4. Check the Dead Letter Queue for failed executions
 
 **Missing notifications:**
-1. Confirm SNS topic configuration and subscriptions
-2. Check email subscription confirmation (if using email notifications)
-3. Verify CloudWatch alarms are configured and enabled
+1. Confirm the SNS topic configuration and subscriptions
+2. Confirm the email subscription (if using email notifications)
+3. Verify CloudWatch alarms exist and are enabled
 
-### Monitoring Resources
+### Where to Look
 - **CloudWatch Logs**: `/aws/lambda/{function-name}`
 - **Custom Metrics**: `AWS/Lambda/AMIBackup` namespace
 - **Dead Letter Queue**: `{name}-{region}-dlq`
 - **X-Ray Traces**: Lambda service map and execution traces
 
-## 🔄 Version History
+## Version History
 
 ### v2.0.0 (Current)
-- ✅ **Modern Runtime**: Upgraded to Node.js 20.x LTS
-- ✅ **Enhanced Security**: Least-privilege IAM with scoped permissions  
-- ✅ **Advanced Monitoring**: 8 custom metrics + CloudWatch alarms
-- ✅ **Reliability**: Dead Letter Queue + X-Ray tracing
-- ✅ **Performance**: 4x memory increase (128MB → 512MB)
-- ✅ **Clean Architecture**: Runtime package building, no committed artifacts
+- Node.js 20.x runtime
+- Least-privilege IAM with scoped permissions
+- 8 custom metrics and CloudWatch alarms
+- Dead Letter Queue and X-Ray tracing
+- Lambda memory raised from 128MB to 512MB
+- Lambda package built at deploy time, no committed artifacts
 
 ### v1.x (Legacy)
-- Basic backup functionality with Node.js 12.x
+- Basic backup functionality on Node.js 12.x
 - Limited monitoring and broad IAM permissions
-- Pre-built Lambda packages committed to repository
+- Pre-built Lambda packages committed to the repository
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! Please:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Test** your changes thoroughly
-4. **Update** documentation as needed
-5. **Submit** a pull request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature-name`)
+3. Test your changes
+4. Update documentation as needed
+5. Open a pull request
 
 ### Development Setup
 ```bash
@@ -291,16 +257,14 @@ terraform plan
 terraform apply
 
 # Commit and push
-git commit -m "Add amazing feature"
+git commit -m "Describe your change"
 git push origin feature/your-feature-name
 ```
 
-## 📄 License
+## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+MIT License. See the [LICENSE](LICENSE) file.
 
 ---
 
-## ⭐ If this module helped you, please consider giving it a star on GitHub!
-
-**Questions or Issues?** Please open an [issue](https://github.com/mikmorley/terraform-aws-ec2-backup/issues) on GitHub.
+Questions or problems? Open an [issue](https://github.com/mikmorley/terraform-aws-ec2-backup/issues).

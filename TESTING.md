@@ -1,68 +1,62 @@
 # Testing Guide
 
-This document describes the comprehensive CI/CD pipeline and testing strategy for the `terraform-aws-ec2-backup` module.
+This document describes the CI pipeline and local testing for the `terraform-aws-ec2-backup` module.
 
-## 🚀 CI/CD Pipeline Overview
+## CI/CD Pipeline Overview
 
-The GitHub Actions workflow (`terraform-lint.yml`) runs automatically on:
-- **Push** to `main` or `develop` branches
-- **Pull Requests** targeting `main` or `develop` branches
+The GitHub Actions workflow (`terraform-lint.yml`) runs on:
+- Pushes to `main` or `develop`
+- Pull requests targeting `main` or `develop`
 
-## 🧪 Test Stages
+## Test Stages
 
 ### 1. Terraform Validation
-**Purpose**: Ensures Terraform code quality and syntax correctness
+Checks Terraform syntax and formatting.
 
-**Checks**:
-- ✅ **Format Check**: Validates consistent code formatting (`terraform fmt`)
-- ✅ **Initialization**: Tests module initialization without errors
-- ✅ **Validation**: Verifies configuration syntax and logic
-- ✅ **PR Comments**: Posts validation results directly in pull requests
+- **Format check**: `terraform fmt`
+- **Initialization**: module initializes without errors
+- **Validation**: configuration syntax and logic
+- **PR comments**: validation results post to the pull request
 
-### 2. Lambda Function Testing  
-**Purpose**: Validates Lambda function code quality and functionality
+### 2. Lambda Function Testing
+Checks the Lambda code.
 
-**Checks**:
-- ✅ **Dependencies**: Installs and validates NPM packages
-- ✅ **ESLint**: Code style and quality checks with custom configuration
-- ✅ **Syntax Check**: Node.js syntax validation (`node -c`)
-- ✅ **Unit Tests**: Mock-based testing with AWS SDK v3 mocks
-- ✅ **Security Audit**: NPM vulnerability scanning (`npm audit`)
+- **Dependencies**: installs NPM packages
+- **ESLint**: style and quality checks with the repo configuration
+- **Syntax check**: `node -c`
+- **Unit tests**: mock-based tests with AWS SDK v3 mocks
+- **Security audit**: `npm audit`
 
 ### 3. Security Scanning
-**Purpose**: Identifies security vulnerabilities and compliance issues
+Finds security and compliance issues.
 
-**Tools**:
-- ✅ **tfsec**: Terraform security scanning
-- ✅ **Checkov**: Infrastructure as Code security analysis
-- ✅ **Soft Fail**: Security issues reported but don't block deployment
+- **tfsec**: Terraform security scanning
+- **Checkov**: Infrastructure as Code security analysis
+- **Soft fail**: findings are reported but do not block the build
 
 ### 4. Terraform Plan Test
-**Purpose**: Validates deployment feasibility and resource planning
+Checks that the module plans cleanly.
 
-**Process**:
-- ✅ **Test Configuration**: Creates realistic module usage example
-- ✅ **Plan Generation**: Runs `terraform plan` without AWS credentials
-- ✅ **PR Comments**: Posts plan output for review
-- ✅ **Resource Validation**: Ensures all resources can be created
+- **Test configuration**: builds a realistic module usage example
+- **Plan generation**: runs `terraform plan` without AWS credentials
+- **PR comments**: posts the plan output for review
+- **Resource validation**: confirms all resources can be planned
 
 ### 5. Documentation Validation
-**Purpose**: Ensures documentation quality and completeness
+Checks the docs.
 
-**Checks**:
-- ✅ **Required Sections**: Validates presence of usage documentation
-- ✅ **Link Validation**: Basic check for external links
-- ✅ **Changelog**: Encourages version tracking best practices
+- **Required sections**: usage documentation is present
+- **Link validation**: basic check of external links
+- **Changelog**: checks for version tracking
 
 ### 6. Final Status Check
-**Purpose**: Aggregates all test results and provides final pass/fail status
+Combines all results into one pass or fail.
 
-**Logic**:
-- ❌ **Fails** if Terraform validation or Lambda testing fails
-- ⚠️ **Warns** for security or documentation issues
-- ✅ **Passes** when all critical checks succeed
+- Fails if Terraform validation or Lambda testing fails
+- Warns on security or documentation issues
+- Passes when all critical checks succeed
 
-## 🔧 Local Testing
+## Local Testing
 
 ### Prerequisites
 ```bash
@@ -146,26 +140,24 @@ terraform init
 terraform plan
 ```
 
-## 📊 Test Results
+## Test Results
 
 ### Pull Request Comments
-The pipeline automatically posts detailed comments on pull requests with:
+The pipeline posts comments on pull requests with:
 
-- **Terraform Validation Results**: Format, init, and validation status
-- **Terraform Plan Output**: Complete resource planning details
-- **Test Summary**: Overall pipeline status and any issues
+- **Terraform validation results**: format, init, and validation status
+- **Terraform plan output**: the full resource plan
+- **Test summary**: overall pipeline status and any issues
 
 ### Status Badges
-The README includes a status badge showing the current pipeline status:
+The README includes a badge for the pipeline status:
 ```markdown
 [![CI/CD Pipeline](https://github.com/mikmorley/terraform-aws-ec2-backup/actions/workflows/terraform-lint.yml/badge.svg)](https://github.com/mikmorley/terraform-aws-ec2-backup/actions/workflows/terraform-lint.yml)
 ```
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
-### Common Issues
-
-**Terraform Format Failures**:
+**Terraform format failures**:
 ```bash
 # Fix formatting
 terraform fmt -recursive
@@ -173,7 +165,7 @@ git add .
 git commit -m "Fix Terraform formatting"
 ```
 
-**Lambda ESLint Errors**:
+**Lambda ESLint errors**:
 ```bash
 cd lambda/
 npx eslint . --ext .js --fix
@@ -181,27 +173,19 @@ git add .
 git commit -m "Fix ESLint issues"
 ```
 
-**Security Scan Failures**:
-- Review tfsec and Checkov output
-- Update configuration to address security concerns
-- For false positives, add appropriate ignore comments
+**Security scan failures**:
+- Read the tfsec and Checkov output
+- Change the configuration to address the finding
+- For false positives, add an ignore comment
 
-**Terraform Plan Failures**:
-- Check variable validation rules
-- Ensure all required variables are provided in test configuration
-- Verify resource compatibility
+**Terraform plan failures**:
+- Check the variable validation rules
+- Confirm the test configuration sets all required variables
+- Check resource compatibility
 
-## 🔄 Continuous Improvement
+## Future Work
 
-The testing pipeline is designed to evolve with the module:
-
-- **New Features**: Add corresponding tests
-- **Security Updates**: Integrate new scanning tools
-- **Performance**: Monitor test execution times
-- **Coverage**: Expand test scenarios as needed
-
-### Future Enhancements
-- Integration testing with real AWS resources (using test accounts)
-- Performance testing for Lambda functions
-- Automated documentation generation
+- Integration tests against real AWS resources in a test account
+- Performance tests for the Lambda function
+- Generated documentation
 - Release automation with semantic versioning
